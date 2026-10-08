@@ -68,6 +68,36 @@ CRON_SECRET=<random string>                         # for the scheduled endpoint
 
 Then, as the Super Admin: **Settings** → add your products (e.g. Sales CRM, VisitFlow, Odoo ERP), adjust the WhatsApp message template, and (optionally) SMTP / WhatsApp webhook. **Users** → add managers and telemarketers with their daily call targets.
 
+## Telecaller Daily Call Report
+
+The team's Excel report (*Telecaller_Daily_Call_Report.xlsx*) is generated from logged calls — nobody types it in.
+
+**Reports → Download report (Excel)** (pick Today / Yesterday / any range; managers can filter to one telecaller) gives the same workbook the team already used:
+
+- **Dashboard** — From/To dates, then *Call Summary* (Total Calls, Connected, Not Connected, New Leads Called, Follow-up Calls, Total Talk Time, Avg Call Length, Interested, Not Interested, Hot/Warm/Cold, Deals Closed, Connect Rate, Interest Rate), *Product Interest*, *Calls by Lead Source* and *Follow-ups Due*, one column per telecaller plus Team Total. Cells are the original COUNTIFS/SUMIFS formulas, saved with their values, so the file reads correctly in phone previews and still recalculates if the dates are changed.
+- **Lists** — the dropdown values.
+- **One sheet per telecaller**, one row per call, columns A–P exactly as before: Date · Customer Name · Phone Number · Company / Business · City · Lead Source · Call Type · Call Status · Call Duration (mins) · Product Interested In · Lead Type · Hot / Warm / Cold · Reason (if Not Interested) · Next Action · Follow-up Date · Remarks (the call time is at the start of Remarks).
+
+The same numbers are on the **Reports** page, live. Telemarketers can download their own sheet.
+
+Where each column comes from (all captured in the *Log call* form):
+
+| Column | Source |
+|---|---|
+| Call Type | automatic — first call to the lead = New Lead, otherwise Follow-up |
+| Call Status | the outcome picked: Connected / Not Answered / Busy / Switched Off / Wrong Number / Call Back Later |
+| Call Duration | timer starts when **Call** is pressed; editable |
+| Product Interested In | product chips (Settings → Products); two or more = "Multiple Products", none = "None" |
+| Lead Type | automatic from the outcome (Interested / Not Interested) |
+| Hot / Warm / Cold | picked on the call, or from the lead score; blank when nobody answered |
+| Reason (if Not Interested) | required for "Not interested" — Price too high, Using another product, No need right now, Not the decision maker, Busy - call later, Budget issue, Other |
+| Next Action | Send Demo, Send Brochure on WhatsApp, Send Quotation, Schedule Meeting, Follow-up Call, Pass to Sales Team, Deal Closed, No Action |
+| Follow-up Date | the follow-up / meeting date set on the call |
+
+Lead sources follow the sheet: Google Search, VisitFlow, Meta Leads, Referral, Website, Other (uploads map "Facebook/Instagram" → Meta Leads, "Google Maps" → Google Search, etc.). Add the products — Visit Flow, Marichi Pulse, Marichi Talks (WhatsApp), Guardly — under **Settings → Products** so they appear as rows.
+
+"Follow-ups Due" in the file is live from SalesPulse (open follow-ups at download time), so a follow-up that has been done no longer counts as overdue.
+
 ## Bulk upload & the lead template
 
 Leads arrive every day in different formats, so the upload doesn't insist on one layout:
@@ -116,6 +146,8 @@ lib/leadService.ts     logCall(), createFollowUp(), bookMeeting(), recordMeeting
 lib/metrics.ts         The one place every report/dashboard number is computed from (Activity log)
 lib/duplicates.ts      Phone/company/email duplicate lookup with owner + next action
 lib/assignment.ts      one-person / round-robin / least-loaded distribution
+lib/callReport.ts      Telecaller Daily Call Report data (one row per call, per-telecaller totals)
+lib/callReportXlsx.ts  Writes the report workbook (exceljs) in the team's original layout
 lib/leadColumns.ts     Bulk-upload columns, header aliases, auto-detection (by header and by content)
 lib/notifications.ts   notifyUser() + hourly / morning / daily-summary sweeps
 lib/time.ts            APP_TIMEZONE-aware day boundaries

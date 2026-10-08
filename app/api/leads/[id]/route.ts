@@ -5,7 +5,7 @@ import { Lead, Activity, FollowUp, Meeting } from "@/models";
 import { ok, fail, withErrorHandling } from "@/lib/api";
 import { getSessionUser, requireAuth } from "@/lib/auth";
 import { canAccessLead, isManager } from "@/lib/scope";
-import { LEAD_SOURCES, normalizePhone, normalizeCompany } from "@/lib/sales";
+import { normalizePhone, normalizeCompany, normalizeSource } from "@/lib/sales";
 import { addActivity } from "@/lib/leadService";
 import {
   LEAD_POPULATE,
@@ -56,7 +56,7 @@ const patchSchema = z.object({
   location: z.string().trim().optional(),
   website: z.string().trim().optional(),
   productId: z.string().nullable().optional(),
-  source: z.enum(LEAD_SOURCES).optional(),
+  source: z.string().transform((v) => normalizeSource(v)).optional(),
   notes: z.string().optional(),
   dealValue: z.number().nonnegative().nullable().optional(),
   doNotContact: z.boolean().optional(),

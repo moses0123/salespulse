@@ -1,5 +1,5 @@
 import { Schema, model, models, Model, Types } from "mongoose";
-import { LEAD_STAGES, LEAD_SOURCES, TEMPERATURES, CALL_OUTCOMES } from "@/lib/sales";
+import { LEAD_STAGES, TEMPERATURES, CALL_OUTCOMES } from "@/lib/sales";
 import type { LeadStage, LeadSource, Temperature, CallOutcome, NextActionType } from "@/lib/sales";
 
 export interface ILead {
@@ -59,7 +59,8 @@ const LeadSchema = new Schema<ILead>(
     location: { type: String, trim: true, default: "" },
     website: { type: String, trim: true, default: "" },
     productId: { type: Schema.Types.ObjectId, ref: "Product", default: null },
-    source: { type: String, enum: LEAD_SOURCES, default: "Other" },
+    // Not an enum on purpose: the list lives in lib/sales.ts (LEAD_SOURCES) and is enforced by the API, so changing it never breaks old records.
+    source: { type: String, default: "Other" },
     assignedTo: { type: Schema.Types.ObjectId, ref: "User", default: null, index: true },
     assignedAt: { type: Date, default: null },
     stage: { type: String, enum: LEAD_STAGES, default: "New", index: true },

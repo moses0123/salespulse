@@ -8,7 +8,8 @@ interface UIContextValue {
   openLead: (id: string) => void;
   closeLead: () => void;
 
-  logCall: { leadId: string; followUpId?: string } | null;
+  /** startedAt = when the Call button was pressed — prefills the call duration. */
+  logCall: { leadId: string; followUpId?: string; startedAt: number } | null;
   openLogCall: (leadId: string, followUpId?: string) => void;
   closeLogCall: () => void;
 
@@ -53,7 +54,7 @@ const UIContext = createContext<UIContextValue | undefined>(undefined);
 
 export function UIProvider({ children }: { children: React.ReactNode }) {
   const [leadDrawerId, setLeadDrawerId] = useState<string | null>(null);
-  const [logCall, setLogCall] = useState<{ leadId: string; followUpId?: string } | null>(null);
+  const [logCall, setLogCall] = useState<{ leadId: string; followUpId?: string; startedAt: number } | null>(null);
   const [followUpLeadId, setFollowUpLeadId] = useState<string | null>(null);
   const [meetingLeadId, setMeetingLeadId] = useState<string | null>(null);
   const [meetingOutcomeId, setMeetingOutcomeId] = useState<string | null>(null);
@@ -70,7 +71,7 @@ export function UIProvider({ children }: { children: React.ReactNode }) {
     openLead: useCallback((id: string) => setLeadDrawerId(id), []),
     closeLead: useCallback(() => setLeadDrawerId(null), []),
     logCall,
-    openLogCall: useCallback((leadId: string, followUpId?: string) => setLogCall({ leadId, followUpId }), []),
+    openLogCall: useCallback((leadId: string, followUpId?: string) => setLogCall({ leadId, followUpId, startedAt: Date.now() }), []),
     closeLogCall: useCallback(() => setLogCall(null), []),
     followUpLeadId,
     openFollowUp: useCallback((id: string) => setFollowUpLeadId(id), []),

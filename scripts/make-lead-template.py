@@ -19,12 +19,11 @@ COLUMNS = [
     ("Industry", 18, "Optional, e.g. Logistics, Healthcare, Retail."),
     ("Location", 18, "Optional. Town / city / area."),
     ("Website", 22, "Optional."),
-    ("Product", 20, "Optional. Product of interest — use the same name as in SalesPulse (e.g. Sales CRM)."),
-    ("Source", 20, "Optional. Pick from the list (Google Maps, Referral, Facebook…)."),
+    ("Product", 20, "Optional. Product of interest — use the same name as in SalesPulse (e.g. Visit Flow, Marichi Pulse, Guardly)."),
+    ("Source", 20, "Optional. Pick from the list: Google Search, VisitFlow, Meta Leads, Referral, Website, Other."),
     ("Notes", 36, "Optional. Anything the caller should know."),
 ]
-SOURCES = ["Internet research", "Google Maps", "Website", "Facebook", "LinkedIn", "Existing database", "Referral",
-           "Website enquiry", "WhatsApp enquiry", "Marketing campaign", "Excel/CSV import", "Other"]
+SOURCES = ["Google Search", "VisitFlow", "Meta Leads", "Referral", "Website", "Other"]
 
 PURPLE = "5B21B6"
 LIGHT = "EDE9FE"
@@ -74,9 +73,9 @@ for i, (name, _, desc) in enumerate(COLUMNS, start=r0 + 1):
 r1 = r0 + len(COLUMNS) + 2
 ins.cell(row=r1, column=1, value="Example rows").font = Font(bold=True, size=12, color=PURPLE)
 example = [
-    ["John Banda", "0977 123456", "ABC Logistics Ltd", "john@abclogistics.co.zm", "Logistics", "Lusaka", "abclogistics.co.zm", "Sales CRM", "Google Maps", "Asked for a call after 2pm"],
+    ["John Banda", "0977 123456", "ABC Logistics Ltd", "john@abclogistics.co.zm", "Logistics", "Lusaka", "abclogistics.co.zm", "Visit Flow", "Google Search", "Asked for a call after 2pm"],
     ["Mary Phiri", "+260 966 111222", "", "", "", "Ndola", "", "", "Referral", ""],
-    ["Peter Mwale", "0955 333444 / 0977 555666", "", "", "", "", "", "", "Facebook", ""],
+    ["Peter Mwale", "0955 333444 / 0977 555666", "", "", "", "", "", "", "Meta Leads", ""],
 ]
 hdr = ins.cell(row=r1 + 1, column=1)
 for j, (name, _, _) in enumerate(COLUMNS, start=1):

@@ -5,7 +5,7 @@ import { Lead, User } from "@/models";
 import { ok, fail, withErrorHandling } from "@/lib/api";
 import { getSessionUser, requireAuth } from "@/lib/auth";
 import { leadScope, isManager } from "@/lib/scope";
-import { LEAD_SOURCES, LEAD_STAGES, TEMPERATURES, OPEN_STAGES, normalizePhone, normalizeCompany } from "@/lib/sales";
+import { LEAD_STAGES, TEMPERATURES, OPEN_STAGES, normalizePhone, normalizeCompany, normalizeSource } from "@/lib/sales";
 import { findDuplicates } from "@/lib/duplicates";
 import { addActivity, createFollowUp, refreshNextAction } from "@/lib/leadService";
 import { LEAD_POPULATE, serializeLead, serializeLeads } from "@/lib/serializers";
@@ -100,7 +100,7 @@ const createSchema = z.object({
   location: z.string().trim().optional(),
   website: z.string().trim().optional(),
   productId: z.string().nullable().optional(),
-  source: z.enum(LEAD_SOURCES).optional(),
+  source: z.string().optional(),
   notes: z.string().optional(),
   dealValue: z.number().nonnegative().nullable().optional(),
   assignedTo: z.string().nullable().optional(),
@@ -156,7 +156,7 @@ export const POST = withErrorHandling(async (req: NextRequest) => {
     location: d.location ?? "",
     website: d.website ?? "",
     productId: d.productId || null,
-    source: d.source ?? "Internet research",
+    source: normalizeSource(d.source),
     notes: d.notes ?? "",
     dealValue: d.dealValue ?? null,
     assignedTo,

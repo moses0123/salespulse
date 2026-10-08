@@ -54,6 +54,19 @@ export interface IActivity {
   notes?: string;
   productId?: Types.ObjectId | null;
   meta?: Record<string, unknown>;
+  /**
+   * Call-report columns (type "call" only) — one Activity row is one row of
+   * the Telecaller Daily Call Report (see lib/callReport.ts).
+   */
+  callType?: "New Lead" | "Follow-up" | null;
+  callStatus?: string | null;
+  durationMins?: number | null;
+  productIds?: Types.ObjectId[];
+  leadType?: string | null;
+  temperature?: string | null;
+  reason?: string | null;
+  nextAction?: string | null;
+  followUpAt?: Date | null;
   createdAt: Date;
 }
 
@@ -68,6 +81,15 @@ const ActivitySchema = new Schema<IActivity>(
     notes: { type: String, default: "" },
     productId: { type: Schema.Types.ObjectId, ref: "Product", default: null },
     meta: { type: Schema.Types.Mixed, default: {} },
+    callType: { type: String, default: null },
+    callStatus: { type: String, default: null },
+    durationMins: { type: Number, default: null, min: 0 },
+    productIds: { type: [Schema.Types.ObjectId], ref: "Product", default: undefined },
+    leadType: { type: String, default: null },
+    temperature: { type: String, default: null },
+    reason: { type: String, default: null },
+    nextAction: { type: String, default: null },
+    followUpAt: { type: Date, default: null },
   },
   { timestamps: { createdAt: true, updatedAt: false } }
 );

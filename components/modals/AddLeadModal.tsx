@@ -22,7 +22,7 @@ const empty = {
   location: "",
   website: "",
   productId: "",
-  source: "Internet research",
+  source: "Other",
   notes: "",
   assignedTo: "__me",
 };

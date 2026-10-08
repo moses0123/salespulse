@@ -69,7 +69,7 @@ export default function ImportLeadsModal() {
   const [preview, setPreview] = useState<Preview | null>(null);
   const [includeCompany, setIncludeCompany] = useState(false);
   const [includeInvalid, setIncludeInvalid] = useState(false);
-  const [defaultSource, setDefaultSource] = useState("Excel/CSV import");
+  const [defaultSource, setDefaultSource] = useState("Other");
   const [defaultProductId, setDefaultProductId] = useState("");
   const [assignMode, setAssignMode] = useState<"none" | "user" | "round_robin" | "least_loaded">("none");
   const [assignees, setAssignees] = useState<string[]>([]);

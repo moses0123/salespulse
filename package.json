@@ -2,7 +2,7 @@
   "name": "salespulse",
   "version": "1.0.0",
   "private": true,
-  "description": "SalesPulse \u2014 Telemarketing & Outbound Sales CRM (built on the TaskPulse foundation).",
+  "description": "SalesPulse — Telemarketing & Outbound Sales CRM (built on the TaskPulse foundation).",
   "scripts": {
     "dev": "next dev",
     "build": "next build",
@@ -14,6 +14,7 @@
     "bcryptjs": "^2.4.3",
     "clsx": "^2.1.1",
     "date-fns": "^3.6.0",
+    "exceljs": "^4.4.0",
     "jose": "^5.9.6",
     "lucide-react": "^0.446.0",
     "mongoose": "^8.6.3",

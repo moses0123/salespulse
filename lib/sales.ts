@@ -42,21 +42,23 @@ export function advanceStage(current: LeadStage, target: LeadStage): LeadStage {
 
 // ── Sources / temperature ──────────────────────────────────────────────────
 
-export const LEAD_SOURCES = [
-  "Internet research",
-  "Google Maps",
-  "Website",
-  "Facebook",
-  "LinkedIn",
-  "Existing database",
-  "Referral",
-  "Website enquiry",
-  "WhatsApp enquiry",
-  "Marketing campaign",
-  "Excel/CSV import",
-  "Other",
-] as const;
+/** Lead sources — the same list as the Telecaller Daily Call Report. */
+export const LEAD_SOURCES = ["Google Search", "VisitFlow", "Meta Leads", "Referral", "Website", "Other"] as const;
 export type LeadSource = (typeof LEAD_SOURCES)[number];
+
+/** Map whatever a file or an old record says to one of LEAD_SOURCES ("facebook" → Meta Leads, "google maps" → Google Search…). */
+export function normalizeSource(raw: string | null | undefined, fallback: LeadSource = "Other"): LeadSource {
+  const v = (raw || "").toLowerCase().trim();
+  if (!v) return fallback;
+  const exact = LEAD_SOURCES.find((s) => s.toLowerCase() === v);
+  if (exact) return exact;
+  if (/google|search|maps/.test(v)) return "Google Search";
+  if (/visit\s*flow/.test(v)) return "VisitFlow";
+  if (/meta|facebook|instagram|\bfb\b|\big\b/.test(v)) return "Meta Leads";
+  if (/refer/.test(v)) return "Referral";
+  if (/web|site|enquiry|inquiry/.test(v)) return "Website";
+  return "Other";
+}
 
 export const TEMPERATURES = ["Hot", "Warm", "Cold"] as const;
 export type Temperature = (typeof TEMPERATURES)[number];
@@ -77,6 +79,7 @@ export function clampScore(n: number) {
 export const CALL_OUTCOMES = [
   "no_answer",
   "busy",
+  "switched_off",
   "wrong_number",
   "not_interested",
   "call_back",
@@ -114,6 +117,7 @@ export interface OutcomeRule {
 export const OUTCOME_RULES: Record<CallOutcome, OutcomeRule> = {
   no_answer: { label: "No answer", connected: false, stage: "Contacted", score: 0, nextAction: "required", defaultFollowUp: "Retry call — no answer", suggestHours: 24, tone: "neutral" },
   busy: { label: "Busy", connected: false, stage: "Contacted", score: 0, nextAction: "required", defaultFollowUp: "Retry call — line busy", suggestHours: 3, tone: "neutral" },
+  switched_off: { label: "Switched off", connected: false, stage: "Contacted", score: 0, nextAction: "required", defaultFollowUp: "Retry call — phone switched off", suggestHours: 4, tone: "neutral" },
   wrong_number: { label: "Wrong number", connected: false, stage: "Contacted", score: 0, nextAction: "none", tone: "negative" },
   not_interested: { label: "Not interested", connected: true, stage: "Lost", score: -20, nextAction: "none", tone: "negative" },
   call_back: { label: "Call back later", connected: true, stage: "Connected", score: 10, nextAction: "required", defaultFollowUp: "Call back as requested", suggestHours: 24, tone: "neutral" },
@@ -125,6 +129,83 @@ export const OUTCOME_RULES: Record<CallOutcome, OutcomeRule> = {
   converted: { label: "Converted", connected: true, stage: "Won", score: 100, nextAction: "none", tone: "win" },
   do_not_contact: { label: "Do not contact", connected: true, stage: "Lost", score: -100, nextAction: "none", tone: "negative" },
 };
+
+// ── Telecaller Daily Call Report vocabulary ────────────────────────────────
+// Every call records the same columns as the team's daily report sheet.
+
+export const CALL_STATUSES = ["Connected", "Not Answered", "Busy", "Switched Off", "Wrong Number", "Call Back Later"] as const;
+export type CallStatus = (typeof CALL_STATUSES)[number];
+
+export function callStatusFor(outcome: CallOutcome): CallStatus {
+  switch (outcome) {
+    case "no_answer": return "Not Answered";
+    case "busy": return "Busy";
+    case "switched_off": return "Switched Off";
+    case "wrong_number": return "Wrong Number";
+    case "call_back": return "Call Back Later";
+    default: return "Connected";
+  }
+}
+
+export type CallType = "New Lead" | "Follow-up";
+export type LeadType = "Interested" | "Not Interested" | "";
+
+export function leadTypeFor(outcome: CallOutcome): LeadType {
+  if (["interested", "meeting_requested", "meeting_booked", "proposal_requested", "converted"].includes(outcome)) return "Interested";
+  if (outcome === "not_interested" || outcome === "do_not_contact") return "Not Interested";
+  return "";
+}
+
+export const NOT_INTERESTED_REASONS = [
+  "Price too high",
+  "Using another product",
+  "No need right now",
+  "Not the decision maker",
+  "Busy - call later",
+  "Budget issue",
+  "Other",
+] as const;
+export type NotInterestedReason = (typeof NOT_INTERESTED_REASONS)[number];
+
+export const NEXT_ACTIONS = [
+  "Send Demo",
+  "Send Brochure on WhatsApp",
+  "Send Quotation",
+  "Schedule Meeting",
+  "Follow-up Call",
+  "Pass to Sales Team",
+  "Deal Closed",
+  "No Action",
+] as const;
+export type NextActionLabel = (typeof NEXT_ACTIONS)[number];
+
+/** Next actions that create a follow-up (everything except the two terminal ones). */
+export const FOLLOW_UP_ACTIONS = NEXT_ACTIONS.filter((a) => a !== "Deal Closed" && a !== "No Action");
+
+export function defaultNextAction(outcome: CallOutcome): NextActionLabel {
+  switch (outcome) {
+    case "meeting_requested":
+    case "meeting_booked": return "Schedule Meeting";
+    case "proposal_requested": return "Send Quotation";
+    case "converted": return "Deal Closed";
+    case "not_interested":
+    case "wrong_number":
+    case "do_not_contact": return "No Action";
+    default: return "Follow-up Call";
+  }
+}
+
+export function channelForAction(action: string): "call" | "whatsapp" | "email" | "visit" {
+  if (/whatsapp|brochure/i.test(action)) return "whatsapp";
+  return "call";
+}
+
+/** What goes in the report's "Product Interested In" column. */
+export function productColumn(names: string[]): string {
+  if (!names.length) return "None";
+  if (names.length === 1) return names[0];
+  return "Multiple Products";
+}
 
 /**
  * Score rules from the spec (§13): answered +10, shows interest +20,

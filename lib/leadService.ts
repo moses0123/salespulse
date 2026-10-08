@@ -18,7 +18,11 @@ import {
   type LeadStage,
   type Temperature,
   leadTitle,
+  callStatusFor,
+  leadTypeFor,
+  defaultNextAction,
 } from "@/lib/sales";
+import type { IActivity } from "@/models/Activity";
 import { notifyUser } from "@/lib/notifications";
 import { formatDateTimeShort } from "@/lib/utils";
 
@@ -34,6 +38,10 @@ export async function addActivity(input: {
   connected?: boolean;
   productId?: Id | null;
   meta?: Record<string, unknown>;
+  /** Call-report columns, for type "call". */
+  report?: Partial<Pick<IActivity, "callType" | "callStatus" | "durationMins" | "leadType" | "temperature" | "reason" | "nextAction" | "followUpAt">> & {
+    productIds?: Id[];
+  };
 }) {
   const activity = await Activity.create({
     leadId: input.leadId,
@@ -45,6 +53,7 @@ export async function addActivity(input: {
     connected: input.connected ?? false,
     productId: input.productId ?? null,
     meta: input.meta ?? {},
+    ...(input.report ?? {}),
   });
   await Lead.updateOne({ _id: input.leadId }, { lastActivityAt: new Date() });
   return activity;
@@ -181,6 +190,14 @@ export interface LogCallInput {
   outcome: CallOutcome;
   notes?: string;
   productId?: string | null;
+  /** All products discussed on this call ("Multiple Products" in the report when more than one). */
+  productIds?: string[];
+  /** Minutes on the call (report column "Call Duration (mins)"). */
+  durationMins?: number | null;
+  /** Report column "Reason (if Not Interested)". */
+  reason?: string | null;
+  /** Report column "Next Action" — one of NEXT_ACTIONS. */
+  nextActionLabel?: string | null;
   temperature?: Temperature | null;
   needIdentified?: boolean;
   askedPricing?: boolean;
@@ -201,28 +218,13 @@ export interface LogCallInput {
 export async function logCall(lead: ILead, actor: IUser, input: LogCallInput) {
   const rule = OUTCOME_RULES[input.outcome];
 
-  const productId = input.productId ?? (lead.productId ? String(lead.productId) : null);
-  let productName: string | undefined;
-  if (productId) productName = (await Product.findById(productId).select("name").lean())?.name;
-
-  const outcomeBits = [rule.label];
-  if (productName && rule.captureInterest) outcomeBits.push(`in ${productName}`);
-  const activity = await addActivity({
-    leadId: lead._id,
-    userId: actor._id,
-    type: "call",
-    outcome: input.outcome,
-    connected: rule.connected,
-    summary: `Outbound call — ${outcomeBits.join(" ")}`,
-    notes: input.notes,
-    productId,
-    meta: {
-      temperature: input.temperature ?? null,
-      needIdentified: !!input.needIdentified,
-      askedPricing: !!input.askedPricing,
-      followUpId: input.followUpId ?? null,
-    },
-  });
+  const productIds = [...new Set((input.productIds ?? []).filter(Boolean))];
+  const productId = productIds[0] ?? input.productId ?? (lead.productId ? String(lead.productId) : null);
+  const productNames = productIds.length
+    ? (await Product.find({ _id: { $in: productIds } }).select("name").lean()).map((p) => p.name)
+    : productId
+      ? [(await Product.findById(productId).select("name").lean())?.name].filter((n): n is string => !!n)
+      : [];
 
   // Score + temperature.
   const score = computeScore({
@@ -232,6 +234,39 @@ export async function logCall(lead: ILead, actor: IUser, input: LogCallInput) {
     askedPricing: input.askedPricing,
   });
   const temperature = rule.captureInterest && input.temperature ? input.temperature : temperatureForScore(score);
+
+  const nextActionLabel = input.nextActionLabel || defaultNextAction(input.outcome);
+  const outcomeBits = [rule.label];
+  if (productNames.length && rule.captureInterest) outcomeBits.push(`in ${productNames.join(", ")}`);
+  if (input.reason) outcomeBits.push(`(${input.reason})`);
+  const activity = await addActivity({
+    leadId: lead._id,
+    userId: actor._id,
+    type: "call",
+    outcome: input.outcome,
+    connected: rule.connected,
+    summary: `Outbound call — ${outcomeBits.join(" ")}${input.durationMins ? ` · ${input.durationMins} min` : ""}`,
+    notes: input.notes,
+    productId,
+    meta: {
+      temperature: input.temperature ?? null,
+      needIdentified: !!input.needIdentified,
+      askedPricing: !!input.askedPricing,
+      followUpId: input.followUpId ?? null,
+    },
+    report: {
+      callType: (lead.callCount ?? 0) === 0 ? "New Lead" : "Follow-up",
+      callStatus: callStatusFor(input.outcome),
+      durationMins: input.durationMins ?? null,
+      productIds,
+      leadType: leadTypeFor(input.outcome) || null,
+      // Hot/Warm/Cold is only meaningful when someone answered.
+      temperature: rule.connected ? temperature : null,
+      reason: input.outcome === "not_interested" || input.outcome === "do_not_contact" ? input.reason ?? null : null,
+      nextAction: nextActionLabel,
+      followUpAt: input.meeting?.scheduledAt ?? input.nextAction?.dueAt ?? null,
+    },
+  });
 
   const update: Record<string, unknown> = {
     score,
@@ -244,7 +279,7 @@ export async function logCall(lead: ILead, actor: IUser, input: LogCallInput) {
   if (input.dealValue != null) update.dealValue = input.dealValue;
   if (input.outcome === "wrong_number") update.phoneValid = false;
   if (input.outcome === "do_not_contact") update.doNotContact = true;
-  if (input.outcome === "not_interested") update.lostReason = "Not interested";
+  if (input.outcome === "not_interested") update.lostReason = input.reason ? `Not interested — ${input.reason}` : "Not interested";
   if (input.outcome === "do_not_contact") update.lostReason = "Do not contact";
   await Lead.updateOne({ _id: lead._id }, update);
   lead.score = score;

@@ -8,7 +8,7 @@ import { getSessionUser, requireAuth } from "@/lib/auth";
 import { pickField } from "@/lib/csv";
 import { isManager } from "@/lib/scope";
 import { LEAD_COLUMNS, splitPhones, type LeadColumnKey } from "@/lib/leadColumns";
-import { LEAD_SOURCES, normalizePhone, normalizeCompany, type LeadSource } from "@/lib/sales";
+import { normalizePhone, normalizeCompany, normalizeSource } from "@/lib/sales";
 import { distributeLeads } from "@/lib/assignment";
 import { assignLeads } from "@/lib/leadService";
 
@@ -20,7 +20,7 @@ const schema = z.object({
   fileName: z.string().max(300).optional(),
   includeCompanyMatches: z.boolean().optional(),
   includeInvalidPhones: z.boolean().optional(),
-  defaultSource: z.enum(LEAD_SOURCES).optional(),
+  defaultSource: z.string().optional(),
   defaultProductId: z.string().nullable().optional(),
   assign: z
     .object({ mode: z.enum(["none", "user", "round_robin", "least_loaded"]), userIds: z.array(z.string()).optional() })
@@ -84,7 +84,6 @@ export const POST = withErrorHandling(async (req: NextRequest) => {
 
   const products = await Product.find({}).select("name").lean();
   const productByName = new Map(products.map((p) => [p.name.toLowerCase().trim(), p._id]));
-  const sourceByName = new Map(LEAD_SOURCES.map((s) => [s.toLowerCase(), s]));
 
   const prepared = d.rows.map((raw, i) => {
     const name = col(raw, "name");
@@ -115,7 +114,7 @@ export const POST = withErrorHandling(async (req: NextRequest) => {
       website: col(raw, "website"),
       productId,
       productName,
-      source: (sourceByName.get(sourceName.toLowerCase()) ?? d.defaultSource ?? "Excel/CSV import") as LeadSource,
+      source: sourceName ? normalizeSource(sourceName) : normalizeSource(d.defaultSource),
       notes,
     };
   });

@@ -6,7 +6,7 @@ import type { ILead } from "@/models/Lead";
 import { ok, fail, withErrorHandling } from "@/lib/api";
 import { getSessionUser, requireAuth } from "@/lib/auth";
 import { canAccessLead } from "@/lib/scope";
-import { CALL_OUTCOMES, OUTCOME_RULES, TEMPERATURES } from "@/lib/sales";
+import { CALL_OUTCOMES, OUTCOME_RULES, TEMPERATURES, NEXT_ACTIONS, NOT_INTERESTED_REASONS, FOLLOW_UP_ACTIONS } from "@/lib/sales";
 import { FOLLOW_UP_CHANNELS } from "@/models/FollowUp";
 import { MEETING_TYPES } from "@/models/Meeting";
 import { logCall } from "@/lib/leadService";
@@ -19,6 +19,10 @@ const schema = z.object({
   outcome: z.enum(CALL_OUTCOMES),
   notes: z.string().max(5000).optional(),
   productId: z.string().nullable().optional(),
+  productIds: z.array(z.string()).max(20).optional(),
+  durationMins: z.number().min(0).max(600).nullable().optional(),
+  reason: z.enum(NOT_INTERESTED_REASONS).nullable().optional(),
+  nextActionLabel: z.enum(NEXT_ACTIONS).nullable().optional(),
   temperature: z.enum(TEMPERATURES).nullable().optional(),
   needIdentified: z.boolean().optional(),
   askedPricing: z.boolean().optional(),
@@ -65,6 +69,12 @@ export const POST = withErrorHandling(async (req: NextRequest, { params }: P) =>
   if (rule.nextAction === "required" && !d.nextAction) {
     return fail(`"${rule.label}" needs a next action — set a follow-up date/time.`, 422);
   }
+  if (d.outcome === "not_interested" && !d.reason) {
+    return fail("Pick the reason they're not interested.", 422);
+  }
+  if (rule.nextAction === "required" && d.nextActionLabel && !(FOLLOW_UP_ACTIONS as readonly string[]).includes(d.nextActionLabel)) {
+    return fail(`"${d.nextActionLabel}" doesn't schedule anything — pick a next action with a date.`, 422);
+  }
   if (rule.nextAction === "meeting" && !d.meeting) {
     return fail("Set the meeting date/time for a booked meeting.", 422);
   }
@@ -77,6 +87,10 @@ export const POST = withErrorHandling(async (req: NextRequest, { params }: P) =>
     outcome: d.outcome,
     notes: d.notes,
     productId: d.productId,
+    productIds: d.productIds,
+    durationMins: d.durationMins ?? null,
+    reason: d.reason ?? null,
+    nextActionLabel: d.nextActionLabel ?? null,
     temperature: d.temperature ?? null,
     needIdentified: d.needIdentified,
     askedPricing: d.askedPricing,
