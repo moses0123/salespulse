@@ -10,6 +10,7 @@ import { CALL_OUTCOMES, OUTCOME_RULES, TEMPERATURES, NEXT_ACTIONS, NOT_INTERESTE
 import { FOLLOW_UP_CHANNELS } from "@/models/FollowUp";
 import { MEETING_TYPES } from "@/models/Meeting";
 import { logCall } from "@/lib/leadService";
+import { ensureProduct } from "@/lib/products";
 import { LEAD_POPULATE, serializeLead } from "@/lib/serializers";
 
 export const dynamic = "force-dynamic";
@@ -20,6 +21,8 @@ const schema = z.object({
   notes: z.string().max(5000).optional(),
   productId: z.string().nullable().optional(),
   productIds: z.array(z.string()).max(20).optional(),
+  /** Products typed on the call that may not be in the catalogue yet. */
+  productNames: z.array(z.string().max(80)).max(10).optional(),
   durationMins: z.number().min(0).max(600).nullable().optional(),
   reason: z.enum(NOT_INTERESTED_REASONS).nullable().optional(),
   nextActionLabel: z.enum(NEXT_ACTIONS).nullable().optional(),
@@ -87,7 +90,7 @@ export const POST = withErrorHandling(async (req: NextRequest, { params }: P) =>
     outcome: d.outcome,
     notes: d.notes,
     productId: d.productId,
-    productIds: d.productIds,
+    productIds: [...(d.productIds ?? []), ...((await Promise.all((d.productNames ?? []).map(ensureProduct))).filter((x): x is string => !!x))],
     durationMins: d.durationMins ?? null,
     reason: d.reason ?? null,
     nextActionLabel: d.nextActionLabel ?? null,

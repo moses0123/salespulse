@@ -2,13 +2,14 @@
 
 import { Suspense, useCallback, useEffect, useMemo, useState } from "react";
 import { useSearchParams } from "next/navigation";
-import { Upload, FileDown, Users as UsersIcon, Search, Building2, AlertTriangle } from "lucide-react";
+import { Upload, FileDown, Users as UsersIcon, Search, Building2, AlertTriangle, SlidersHorizontal } from "lucide-react";
 import { useUI } from "@/context/UIContext";
 import { useCurrentUser } from "@/context/CurrentUserContext";
 import { useUsers } from "@/hooks/useUsers";
 import { useProducts, useFacets } from "@/hooks/useCatalog";
 import { StageBadge, TemperatureBadge, OutcomeText } from "@/components/ui/StatusBadge";
 import EmptyState from "@/components/ui/EmptyState";
+import ContactActions from "@/components/leads/ContactActions";
 import Pagination from "@/components/ui/Pagination";
 import ErrorNote from "@/components/ui/ErrorNote";
 import { api, download } from "@/lib/client";
@@ -44,6 +45,7 @@ function LeadsInner() {
   const [productId, setProductId] = useState("");
   const [industry, setIndustry] = useState("");
   const [sort, setSort] = useState("recent");
+  const [showFilters, setShowFilters] = useState(false);
   const [page, setPage] = useState(1);
   const [data, setData] = useState<{ items: LeadDTO[]; total: number; pageSize: number } | null>(null);
   const [selected, setSelected] = useState<Set<string>>(new Set());
@@ -53,6 +55,8 @@ function LeadsInner() {
     const t = setTimeout(() => setDebouncedQ(q), 300);
     return () => clearTimeout(t);
   }, [q]);
+
+  const activeFilters = [stage !== "open" ? stage || "all" : "", temperature, assignedTo, source, productId, industry].filter(Boolean).length;
 
   const qs = useMemo(() => {
     const p = new URLSearchParams({ page: String(page), pageSize: "50", sort });
@@ -117,10 +121,19 @@ function LeadsInner() {
         ))}
       </div>
 
-      <div className="grid grid-cols-2 gap-2 md:grid-cols-4 xl:grid-cols-8">
-        <div className="relative col-span-2">
+      <div className="flex gap-2 md:hidden">
+        <div className="relative flex-1">
           <Search size={14} className="absolute left-3 top-1/2 -translate-y-1/2 text-ink-muted" />
-          <input className="input !pl-8" placeholder="Search name, phone, company…" value={q} onChange={(e) => setQ(e.target.value)} />
+          <input className="input !pl-8" type="search" placeholder="Search name, phone, company…" value={q} onChange={(e) => setQ(e.target.value)} />
+        </div>
+        <button className={cn("btn-secondary", activeFilters > 0 && "!border-primary-600 text-primary-700 dark:text-primary-300")} onClick={() => setShowFilters((v) => !v)}>
+          <SlidersHorizontal size={15} /> Filters{activeFilters > 0 ? ` (${activeFilters})` : ""}
+        </button>
+      </div>
+      <div className={cn("grid-cols-2 gap-2 md:grid md:grid-cols-4 xl:grid-cols-8", showFilters ? "grid" : "hidden")}>
+        <div className="relative col-span-2 hidden md:block">
+          <Search size={14} className="absolute left-3 top-1/2 -translate-y-1/2 text-ink-muted" />
+          <input className="input !pl-8" type="search" placeholder="Search name, phone, company…" value={q} onChange={(e) => setQ(e.target.value)} />
         </div>
         <select className="input" value={stage} onChange={(e) => setStage(e.target.value)} aria-label="Stage">
           <option value="open">Open stages</option>
@@ -179,7 +192,47 @@ function LeadsInner() {
         ) : data.items.length === 0 ? (
           <EmptyState icon={Building2} title="No leads match" description="Adjust the filters, add a lead, or bulk-upload today's list." />
         ) : (
-          <div className="overflow-x-auto">
+          <>
+          {/* Phones: one tappable card per lead with Call / WhatsApp right there. */}
+          <ul className="divide-y divide-surface-border/60 md:hidden">
+            {data.items.map((l) => {
+              const overdue = l.nextActionAt && new Date(l.nextActionAt) < now;
+              return (
+                <li key={l._id} className="flex gap-3 px-3 py-3">
+                  {isMgr && (
+                    <input type="checkbox" className="mt-1 h-4 w-4 shrink-0" checked={selected.has(l._id)} onChange={() => toggle(l._id)} aria-label={`Select ${leadTitle(l)}`} />
+                  )}
+                  <div className="min-w-0 flex-1">
+                    <button className="block w-full text-left" onClick={() => openLead(l._id)}>
+                      <span className="flex items-start justify-between gap-2">
+                        <span className="min-w-0">
+                          <span className="block truncate font-medium text-ink">{leadTitle(l)}</span>
+                          <span className="block truncate text-xs text-ink-muted">{leadSubtitle(l)}</span>
+                        </span>
+                        <StageBadge stage={l.stage} />
+                      </span>
+                      <span className="mt-1.5 flex flex-wrap items-center gap-x-2 gap-y-1 text-xs text-ink-muted">
+                        <TemperatureBadge temperature={l.temperature} score={l.score} />
+                        {l.product && <span>{l.product.name}</span>}
+                        {l.nextActionAt ? (
+                          <span className={cn(overdue && "font-medium text-critical-600 dark:text-critical-500")}>
+                            {overdue && "⚠ "}Next: {formatDue(l.nextActionAt)}
+                          </span>
+                        ) : (
+                          <span>{l.lastContactAt ? `Last call ${timeAgo(l.lastContactAt)}` : "Never called"}</span>
+                        )}
+                        {isMgr && <span>· {l.assignee?.name ?? "Unassigned"}</span>}
+                      </span>
+                    </button>
+                    <div className="mt-2">
+                      <ContactActions lead={l} disabled={l.doNotContact} showView={false} />
+                    </div>
+                  </div>
+                </li>
+              );
+            })}
+          </ul>
+          <div className="hidden overflow-x-auto md:block">
             <table className="w-full min-w-[900px] text-sm">
               <thead>
                 <tr className="border-b border-surface-border text-left text-[11px] uppercase tracking-wide text-ink-muted">
@@ -248,6 +301,7 @@ function LeadsInner() {
               </tbody>
             </table>
           </div>
+          </>
         )}
         {data && <Pagination page={page} pageCount={Math.ceil(data.total / data.pageSize)} onChange={setPage} totalItems={data.total} pageSize={data.pageSize} />}
       </div>

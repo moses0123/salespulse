@@ -9,6 +9,7 @@ import { useProducts, useFacets } from "@/hooks/useCatalog";
 import Modal from "@/components/ui/Modal";
 import ErrorNote from "@/components/ui/ErrorNote";
 import DuplicateList from "@/components/leads/DuplicateList";
+import ProductInput from "@/components/leads/ProductInput";
 import { api, ApiError } from "@/lib/client";
 import { LEAD_SOURCES } from "@/lib/sales";
 import type { DuplicateMatchDTO, LeadDTO } from "@/lib/types";
@@ -21,7 +22,7 @@ const empty = {
   industry: "",
   location: "",
   website: "",
-  productId: "",
+  productName: "",
   source: "Other",
   notes: "",
   assignedTo: "__me",
@@ -29,11 +30,11 @@ const empty = {
 
 /** Add a single lead — with a live duplicate check as the phone/company/email is typed. */
 export default function AddLeadModal() {
-  const { isAddLeadOpen, closeAddLead, triggerRefresh, openLead } = useUI();
+  const { isAddLeadOpen, closeAddLead, triggerRefresh, openLead , refreshKey } = useUI();
   const { currentUser } = useCurrentUser();
   const isMgr = currentUser?.role !== "telemarketer";
   const { users } = useUsers(undefined, { activeOnly: true });
-  const products = useProducts();
+  const products = useProducts(refreshKey);
   const facets = useFacets();
   const [f, setF] = useState(empty);
   const [dups, setDups] = useState<DuplicateMatchDTO[]>([]);
@@ -74,7 +75,7 @@ export default function AddLeadModal() {
       const lead = await api<LeadDTO>("/api/leads", {
         body: {
           ...f,
-          productId: f.productId || null,
+          productName: f.productName.trim() || null,
           assignedTo: f.assignedTo === "__me" ? undefined : f.assignedTo || null,
           force: dups.length > 0,
         },
@@ -122,7 +123,7 @@ export default function AddLeadModal() {
           </div>
           <div>
             <label className="label">Phone *</label>
-            <input className="input" value={f.phone} onChange={set("phone")} placeholder="0977 123456 or +260…" />
+            <input className="input" type="tel" inputMode="tel" autoComplete="tel" value={f.phone} onChange={set("phone")} placeholder="0977 123456 or +260…" />
           </div>
         </div>
         <DuplicateList matches={dups} />
@@ -134,8 +135,12 @@ export default function AddLeadModal() {
           </div>
           <div>
             <label className="label">Email</label>
-            <input type="email" className="input" value={f.email} onChange={set("email")} />
+            <input type="email" inputMode="email" className="input" value={f.email} onChange={set("email")} />
           </div>
+        </div>
+        <div>
+          <label className="label" htmlFor="add-lead-product">Product of interest</label>
+          <ProductInput id="add-lead-product" value={f.productName} onChange={(v) => setF({ ...f, productName: v })} products={products} />
         </div>
         {dups.length > 0 && !canForce && (
           <p className="text-xs text-ink-muted">This number is already owned by someone else — ask your manager to reassign it if it should be yours.</p>
@@ -152,13 +157,6 @@ export default function AddLeadModal() {
           <div>
             <label className="label">Website</label>
             <input className="input" value={f.website} onChange={set("website")} />
-          </div>
-          <div>
-            <label className="label">Product of interest</label>
-            <select className="input" value={f.productId} onChange={set("productId")}>
-              <option value="">—</option>
-              {products.map((p) => <option key={p._id} value={p._id}>{p.name}</option>)}
-            </select>
           </div>
           <div>
             <label className="label">Source</label>

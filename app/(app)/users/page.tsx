@@ -168,7 +168,7 @@ export default function UsersPage() {
                       <span className="flex items-center gap-1">
                         <input
                           autoFocus
-                          className="input !w-36 !py-1 !text-xs"
+                          className="input !w-36 !py-1 sm:!text-xs"
                           placeholder="+260..."
                           value={phoneDraft}
                           onChange={(e) => setPhoneDraft(e.target.value)}
@@ -233,7 +233,7 @@ export default function UsersPage() {
                         min={0}
                         defaultValue={u.dailyCallTarget}
                         onBlur={(e) => Number(e.target.value) !== u.dailyCallTarget && patchUser(u._id, { dailyCallTarget: Number(e.target.value) || 0 })}
-                        className="input !w-20 !py-1 !text-xs tabular-nums"
+                        className="input !w-20 !py-1 sm:!text-xs tabular-nums"
                         aria-label={`Daily call target for ${u.name}`}
                       />
                     )}

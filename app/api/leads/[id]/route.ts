@@ -7,6 +7,7 @@ import { getSessionUser, requireAuth } from "@/lib/auth";
 import { canAccessLead, isManager } from "@/lib/scope";
 import { normalizePhone, normalizeCompany, normalizeSource } from "@/lib/sales";
 import { addActivity } from "@/lib/leadService";
+import { ensureProduct } from "@/lib/products";
 import {
   LEAD_POPULATE,
   FOLLOW_UP_POPULATE,
@@ -56,6 +57,8 @@ const patchSchema = z.object({
   location: z.string().trim().optional(),
   website: z.string().trim().optional(),
   productId: z.string().nullable().optional(),
+  /** Typed product name ("" clears it) — matched to the catalogue or added to it. */
+  productName: z.string().max(80).nullable().optional(),
   source: z.string().transform((v) => normalizeSource(v)).optional(),
   notes: z.string().optional(),
   dealValue: z.number().nonnegative().nullable().optional(),
@@ -88,7 +91,8 @@ export const PATCH = withErrorHandling(async (req: NextRequest, { params }: P) =
 
   const parsed = patchSchema.safeParse(await req.json());
   if (!parsed.success) return fail("Invalid input", 422, parsed.error.flatten());
-  const d = parsed.data;
+  const { productName, ...d } = parsed.data;
+  if (productName !== undefined) d.productId = productName ? await ensureProduct(productName) : null;
   if (d.doNotContact === false && !isManager(user)) return fail("Only a manager can lift do-not-contact", 403);
 
   const changed: string[] = [];

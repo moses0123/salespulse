@@ -68,8 +68,9 @@
     @apply btn hover:bg-surface-hover/5 text-ink-secondary px-2.5 py-1.5;
   }
 
+  /* 16px on phones: iOS zooms the page into any input smaller than that. */
   .input {
-    @apply w-full rounded-lg bg-surface-inset border border-surface-border px-3 py-2 text-sm text-ink
+    @apply w-full rounded-lg bg-surface-inset border border-surface-border px-3 py-2 text-base sm:text-sm text-ink
       placeholder:text-ink-muted focus:outline-none focus:ring-2 focus:ring-primary-500 focus:border-transparent;
   }
 

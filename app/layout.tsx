@@ -24,6 +24,7 @@ export const viewport: Viewport = {
   themeColor: "#7c3aed",
   width: "device-width",
   initialScale: 1,
+  viewportFit: "cover",
 };
 
 // Applied before React hydrates so there's no flash of the wrong theme.

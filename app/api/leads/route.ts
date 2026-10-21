@@ -7,6 +7,7 @@ import { getSessionUser, requireAuth } from "@/lib/auth";
 import { leadScope, isManager } from "@/lib/scope";
 import { LEAD_STAGES, TEMPERATURES, OPEN_STAGES, normalizePhone, normalizeCompany, normalizeSource } from "@/lib/sales";
 import { findDuplicates } from "@/lib/duplicates";
+import { ensureProduct } from "@/lib/products";
 import { addActivity, createFollowUp, refreshNextAction } from "@/lib/leadService";
 import { LEAD_POPULATE, serializeLead, serializeLeads } from "@/lib/serializers";
 import { getSettingsWithSecrets } from "@/lib/settings";
@@ -100,6 +101,8 @@ const createSchema = z.object({
   location: z.string().trim().optional(),
   website: z.string().trim().optional(),
   productId: z.string().nullable().optional(),
+  /** Typed product name — matched to the catalogue or added to it. Takes precedence over productId. */
+  productName: z.string().max(80).nullable().optional(),
   source: z.string().optional(),
   notes: z.string().optional(),
   dealValue: z.number().nonnegative().nullable().optional(),
@@ -155,7 +158,7 @@ export const POST = withErrorHandling(async (req: NextRequest) => {
     industry: d.industry ?? "",
     location: d.location ?? "",
     website: d.website ?? "",
-    productId: d.productId || null,
+    productId: d.productName ? await ensureProduct(d.productName) : d.productId || null,
     source: normalizeSource(d.source),
     notes: d.notes ?? "",
     dealValue: d.dealValue ?? null,

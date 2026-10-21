@@ -73,9 +73,9 @@ export default function Header() {
           ))}
         </nav>
 
-        <button onClick={() => setCommandPaletteOpen(true)} className="btn-secondary min-w-0 max-w-xs flex-1 !justify-start text-ink-muted">
+        <button onClick={() => setCommandPaletteOpen(true)} className="btn-secondary min-w-0 max-w-xs !justify-start text-ink-muted sm:flex-1" aria-label="Find a lead">
           <Search size={14} className="shrink-0" />
-          <span className="min-w-0 flex-1 truncate text-left">Find a lead…</span>
+          <span className="hidden min-w-0 flex-1 truncate text-left sm:inline">Find a lead…</span>
           <kbd className="hidden shrink-0 rounded border border-surface-border bg-surface-inset px-1.5 py-0.5 text-[10px] sm:inline">⌘K</kbd>
         </button>
 

@@ -59,9 +59,9 @@ export default function RangePicker({
       </div>
       {value === "custom" && (
         <span className="flex items-center gap-1 text-xs text-ink-muted">
-          <input type="date" className="input !w-auto !py-1 !text-xs" value={custom.from} max={custom.to} onChange={(e) => onCustom({ ...custom, from: e.target.value })} />
+          <input type="date" className="input !w-auto !py-1 sm:!text-xs" value={custom.from} max={custom.to} onChange={(e) => onCustom({ ...custom, from: e.target.value })} />
           to
-          <input type="date" className="input !w-auto !py-1 !text-xs" value={custom.to} max={localDateInput()} onChange={(e) => onCustom({ ...custom, to: e.target.value })} />
+          <input type="date" className="input !w-auto !py-1 sm:!text-xs" value={custom.to} max={localDateInput()} onChange={(e) => onCustom({ ...custom, to: e.target.value })} />
         </span>
       )}
     </div>

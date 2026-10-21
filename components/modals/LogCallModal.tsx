@@ -42,12 +42,15 @@ const minutesSince = (t: number) => Math.max(0, Math.round(((Date.now() - t) / 6
  * action, follow-up date, remarks) so the report fills itself in.
  */
 export default function LogCallModal() {
-  const { logCall, closeLogCall, triggerRefresh } = useUI();
-  const products = useProducts();
+  const { logCall, closeLogCall, triggerRefresh , refreshKey } = useUI();
+  const products = useProducts(refreshKey);
   const [detail, setDetail] = useState<LeadDetailDTO | null>(null);
   const [outcome, setOutcome] = useState<CallOutcome | null>(null);
   const [notes, setNotes] = useState("");
   const [productIds, setProductIds] = useState<string[]>([]);
+  /** Products typed on the call that aren't in the catalogue yet. */
+  const [newProducts, setNewProducts] = useState<string[]>([]);
+  const [productDraft, setProductDraft] = useState("");
   const [temperature, setTemperature] = useState<Temperature | "">("");
   const [needIdentified, setNeedIdentified] = useState(false);
   const [askedPricing, setAskedPricing] = useState(false);
@@ -77,6 +80,8 @@ export default function LogCallModal() {
     setAskedPricing(false);
     setDealValue("");
     setReason("");
+    setNewProducts([]);
+    setProductDraft("");
     setDuration("");
     setDurationTouched(false);
     setNextDetails("");
@@ -132,6 +137,15 @@ export default function LogCallModal() {
     (!needsReason || !!reason) &&
     (rule?.nextAction !== "meeting" || !!meetingAt);
 
+  const selectedCount = productIds.length + newProducts.length;
+  const addTypedProduct = () => {
+    const name = productDraft.replace(/\s+/g, " ").trim();
+    if (!name) return;
+    const match = products.find((p) => p.name.toLowerCase() === name.toLowerCase());
+    if (match) setProductIds((ids) => (ids.includes(match._id) ? ids : [...ids, match._id]));
+    else setNewProducts((list) => (list.some((x) => x.toLowerCase() === name.toLowerCase()) ? list : [...list, name]));
+    setProductDraft("");
+  };
   const toggleProduct = (id: string) => setProductIds((ids) => (ids.includes(id) ? ids.filter((x) => x !== id) : [...ids, id]));
 
   const submit = async () => {
@@ -145,6 +159,7 @@ export default function LogCallModal() {
           outcome,
           notes: notes || undefined,
           productIds,
+          productNames: newProducts,
           durationMins: duration === "" ? null : Number(duration),
           reason: outcome === "not_interested" || outcome === "do_not_contact" ? reason || null : null,
           nextActionLabel: reportNextAction,
@@ -273,10 +288,38 @@ export default function LogCallModal() {
                     {p.name}
                   </button>
                 ))}
-                {products.length === 0 && <span className="text-xs text-ink-muted">No products yet — a Super Admin adds them under Settings.</span>}
+                {newProducts.map((n) => (
+                  <button
+                    key={n}
+                    type="button"
+                    onClick={() => setNewProducts((list) => list.filter((x) => x !== n))}
+                    className="rounded-full border border-primary-600 bg-primary-500/10 px-2.5 py-1 text-xs font-medium text-primary-700 dark:text-primary-300"
+                    title="Tap to remove"
+                  >
+                    {n} ✕
+                  </button>
+                ))}
+              </div>
+              <div className="mt-1.5 flex gap-1.5">
+                <input
+                  className="input !py-1.5"
+                  value={productDraft}
+                  onChange={(e) => setProductDraft(e.target.value)}
+                  onKeyDown={(e) => {
+                    if (e.key === "Enter") {
+                      e.preventDefault();
+                      addTypedProduct();
+                    }
+                  }}
+                  placeholder={products.length ? "Another product? Type it" : "Type the product discussed"}
+                  enterKeyHint="done"
+                />
+                <button type="button" className="btn-secondary !py-1.5" disabled={!productDraft.trim()} onClick={addTypedProduct}>
+                  Add
+                </button>
               </div>
               <p className="mt-1 text-[10px] text-ink-muted">
-                {productIds.length === 0 ? "None" : productIds.length === 1 ? "One product" : "Multiple Products"} — pick all that were discussed.
+                {selectedCount === 0 ? "None" : selectedCount === 1 ? "One product" : "Multiple Products"} — pick or type all that were discussed.
               </p>
             </div>
           )}
@@ -411,7 +454,7 @@ export default function LogCallModal() {
                       <option key={a}>{a}</option>
                     ))}
                   </select>
-                  <input className="input mt-1.5 !py-1.5 !text-xs" value={nextDetails} onChange={(e) => setNextDetails(e.target.value)} placeholder="Details (optional) — e.g. VisitFlow pricing" />
+                  <input className="input mt-1.5 !py-1.5 sm:!text-xs" value={nextDetails} onChange={(e) => setNextDetails(e.target.value)} placeholder="Details (optional) — e.g. VisitFlow pricing" />
                 </div>
                 <div>
                   <label className="label">Follow-up date</label>

@@ -10,6 +10,7 @@ import { useCurrentUser } from "@/context/CurrentUserContext";
 import { useProducts, useFacets } from "@/hooks/useCatalog";
 import { useUsers } from "@/hooks/useUsers";
 import ContactActions from "@/components/leads/ContactActions";
+import ProductInput from "@/components/leads/ProductInput";
 import { StageBadge, TemperatureBadge, OutcomeText } from "@/components/ui/StatusBadge";
 import ErrorNote from "@/components/ui/ErrorNote";
 import Avatar from "@/components/ui/Avatar";
@@ -62,7 +63,7 @@ export default function LeadDrawer() {
   const { leadDrawerId, closeLead, refreshKey, triggerRefresh, openFollowUp, openBookMeeting, openMeetingOutcome } = useUI();
   const { currentUser } = useCurrentUser();
   const isMgr = currentUser?.role === "admin" || currentUser?.role === "manager";
-  const products = useProducts();
+  const products = useProducts(refreshKey);
   const facets = useFacets();
   const { users } = useUsers(undefined, { activeOnly: true });
 
@@ -130,7 +131,7 @@ export default function LeadDrawer() {
       industry: lead.industry ?? "",
       location: lead.location ?? "",
       website: lead.website ?? "",
-      productId: lead.productId ?? "",
+      productName: lead.product?.name ?? "",
       source: lead.source,
       dealValue: lead.dealValue ?? "",
       notes: lead.notes ?? "",
@@ -142,7 +143,7 @@ export default function LeadDrawer() {
     run(async () => {
       await api(`/api/leads/${leadDrawerId}`, {
         method: "PATCH",
-        body: { ...form, productId: form.productId || null, dealValue: form.dealValue === "" ? null : Number(form.dealValue) },
+        body: { ...form, productName: (form.productName ?? "").trim(), dealValue: form.dealValue === "" ? null : Number(form.dealValue) },
       });
       setEditing(false);
     });
@@ -249,7 +250,7 @@ export default function LeadDrawer() {
                         </span>
                         {rescheduleId === f._id ? (
                           <span className="flex items-center gap-1">
-                            <input type="datetime-local" className="input !w-48 !py-1 !text-xs" value={rescheduleTo} onChange={(e) => setRescheduleTo(e.target.value)} />
+                            <input type="datetime-local" className="input !w-48 !py-1 sm:!text-xs" value={rescheduleTo} onChange={(e) => setRescheduleTo(e.target.value)} />
                             <button
                               className="btn-primary !px-2 !py-1 text-xs"
                               disabled={!rescheduleTo || saving}
@@ -411,16 +412,9 @@ export default function LeadDrawer() {
                     {field("industry", "Industry", { list: "dl-industries" })}
                     {field("location", "Location", { list: "dl-locations" })}
                     {field("website", "Website")}
-                    <div>
+                    <div className="sm:col-span-2">
                       <label className="label">Product</label>
-                      <select className="input" value={form.productId} onChange={(e) => setForm({ ...form, productId: e.target.value })}>
-                        <option value="">—</option>
-                        {products.map((p) => (
-                          <option key={p._id} value={p._id}>
-                            {p.name}
-                          </option>
-                        ))}
-                      </select>
+                      <ProductInput value={form.productName ?? ""} onChange={(v) => setForm({ ...form, productName: v })} products={products} />
                     </div>
                     <div>
                       <label className="label">Source</label>

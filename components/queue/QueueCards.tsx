@@ -54,7 +54,7 @@ export function FollowUpCard({ f, showAssignee }: { f: FollowUpDTO; showAssignee
         <ContactActions lead={{ ...lead, product: null }} followUpId={f._id} />
         {resched ? (
           <span className="flex items-center gap-1">
-            <input type="datetime-local" className="input !w-44 !py-1 !text-xs" value={to} onChange={(e) => setTo(e.target.value)} />
+            <input type="datetime-local" className="input !w-44 !py-1 sm:!text-xs" value={to} onChange={(e) => setTo(e.target.value)} />
             <button className="btn-primary !px-2 !py-1 text-xs" disabled={!to} onClick={() => patch({ action: "reschedule", dueAt: new Date(to).toISOString() })}>
               Save
             </button>

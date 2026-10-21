@@ -45,7 +45,9 @@ export default function Modal({
   if (!open) return null;
 
   return (
-    <div className="fixed inset-0 z-50 flex items-start justify-center overflow-y-auto p-4 pt-[8vh] animate-fade-in">
+    // Phones: a full-screen sheet with a pinned footer, so the Save button is always reachable above the keyboard.
+    // Larger screens: the centred dialog.
+    <div className="fixed inset-0 z-50 flex items-stretch justify-center overflow-y-auto animate-fade-in sm:items-start sm:p-4 sm:pt-[8vh]">
       <div
         className="fixed inset-0 bg-black/60 backdrop-blur-sm"
         onClick={onClose}
@@ -55,11 +57,11 @@ export default function Modal({
         role="dialog"
         aria-modal="true"
         className={cn(
-          "relative w-full panel p-0 overflow-hidden",
+          "relative flex h-[100dvh] w-full flex-col overflow-hidden rounded-none border-0 bg-surface-panel p-0 sm:h-auto sm:panel",
           sizeClasses[size]
         )}
       >
-        <div className="flex items-start justify-between border-b border-surface-border px-5 py-4">
+        <div className="flex shrink-0 items-start justify-between border-b border-surface-border px-4 py-3.5 pt-[max(0.875rem,env(safe-area-inset-top))] sm:px-5 sm:py-4">
           <div>
             <h2 className="text-base font-semibold text-ink">{title}</h2>
             {description && (
@@ -74,9 +76,9 @@ export default function Modal({
             <X size={18} />
           </button>
         </div>
-        <div className="px-5 py-4 max-h-[65vh] overflow-y-auto">{children}</div>
+        <div className="min-h-0 flex-1 overflow-y-auto overscroll-contain px-4 py-4 sm:max-h-[65vh] sm:flex-none sm:px-5">{children}</div>
         {footer && (
-          <div className="flex items-center justify-end gap-2 border-t border-surface-border px-5 py-3.5 bg-surface-inset">
+          <div className="flex shrink-0 flex-wrap items-center justify-end gap-2 border-t border-surface-border bg-surface-inset px-4 py-3 pb-[max(0.75rem,env(safe-area-inset-bottom))] sm:px-5 sm:py-3.5">
             {footer}
           </div>
         )}
